@@ -139,6 +139,7 @@
 <script>
     const SUPABASE_URL = "https://sbbchelaldkwsgeutxxg.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_449WPgIWrOqh6i--LOVcfg_sMTe5vnh";
+    // Fixed: Use window.supabase.createClient to correctly initialize the client
     const vulpisDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let scene, camera, renderer, characterGroup, headMesh;
@@ -291,6 +292,6 @@
     }
 </script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
-    document.addEventListener('alpine:updated', () => { lucide.createIcons(); });
+    document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+    document.addEventListener('alpine:updated', () => { if (window.lucide) lucide.createIcons(); });
 </script>
