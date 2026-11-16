@@ -2,7 +2,8 @@
 const SUPABASE_URL = "https://sbbchelaldkwsgeutxxg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_449WPgIWrOqh6i--LOVcfg_sMTe5vnh";
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// FIXED: Renamed our client to vulpisDB so it doesn't crash the browser
+const vulpisDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. Grab the UI Elements
 const loginBtn = document.getElementById('login-btn');
@@ -16,13 +17,13 @@ let currentUser = null;
 
 // 3. Check if user is logged in
 async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await vulpisDB.auth.getSession();
     if (session) {
         currentUser = session.user;
         userSection.innerHTML = `<span class="text-green-400 font-bold mr-4">Logged In</span> <button id="logout-btn" class="bg-red-500 px-4 py-2 rounded font-bold">Logout</button>`;
         
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            await supabase.auth.signOut();
+            await vulpisDB.auth.signOut();
             location.reload();
         });
         
@@ -38,10 +39,10 @@ if (loginBtn) {
         
         if (!email || !password) return;
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await vulpisDB.auth.signInWithPassword({ email, password });
         
         if (error) {
-            const { error: signUpError } = await supabase.auth.signUp({ email, password });
+            const { error: signUpError } = await vulpisDB.auth.signUp({ email, password });
             if (signUpError) alert("Error: " + signUpError.message);
             else {
                 alert("Account created! You can now log in.");
@@ -56,7 +57,7 @@ if (loginBtn) {
 // 5. Load and Save Avatar Data
 async function loadAvatar() {
     if (!currentUser) return;
-    const { data, error } = await supabase.from('avatars').select('cosmetics').eq('user_id', currentUser.id).single();
+    const { data, error } = await vulpisDB.from('avatars').select('cosmetics').eq('user_id', currentUser.id).single();
     
     if (data && data.cosmetics) {
         skinColorInput.value = data.cosmetics.skinColor || '#ffcc99';
@@ -72,7 +73,7 @@ saveAvatarBtn.addEventListener('click', async () => {
     
     const cosmetics = { skinColor: skinColorInput.value, hatId: hatSelect.value };
 
-    const { error } = await supabase.from('avatars').upsert({
+    const { error } = await vulpisDB.from('avatars').upsert({
         user_id: currentUser.id,
         cosmetics: cosmetics
     });
@@ -83,7 +84,7 @@ saveAvatarBtn.addEventListener('click', async () => {
 
 // 6. Fetch Games for the Homepage
 async function loadGames() {
-    const { data: games, error } = await supabase.from('games').select('*');
+    const { data: games, error } = await vulpisDB.from('games').select('*');
     
     if (error || !games) {
         gamesContainer.innerHTML = `<p class="text-red-500">Failed to load games.</p>`;
