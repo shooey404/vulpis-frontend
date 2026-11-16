@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vulpis</title>
+    <title>Vulpis - Discover Games & UGC</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -43,7 +43,11 @@
                     <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Home</button>
                     <button @click="activeTab = 'discover'" :class="activeTab === 'discover' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Discover</button>
                     <button @click="activeTab = 'avatarShop'" :class="activeTab === 'avatarShop' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Shop</button>
-                    <button @click="activeTab = 'editor'; $nextTick(() => { updateWebGLSize(); })" :class="activeTab === 'editor' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Editor</button>
+                    
+                    <!-- Only show Avatar Editor if logged in -->
+                    <template x-if="user.isLoggedIn">
+                        <button @click="activeTab = 'editor'; $nextTick(() => { updateWebGLSize(); })" :class="activeTab === 'editor' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Editor</button>
+                    </template>
                 </nav>
             </div>
 
@@ -105,7 +109,7 @@
             <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Hello, <span x-text="user.name || 'Player'"></span>!</h1>
-                    <p class="text-sm text-gray-500 mt-0.5">Jump back into your favorite worlds</p>
+                    <p class="text-sm text-gray-500 mt-0.5">Ready to jump back into your favorite worlds?</p>
                 </div>
                 <button @click="activeTab = 'discover'" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition">Discover Games</button>
             </div>
@@ -157,8 +161,20 @@
                 formatCoins(val) { return val ? val.toLocaleString() : '0'; },
                 
                 async initSupabase() {
+                    // Listen for real-time authentication state changes so reload keeps you logged in
+                    vulpisDB.auth.onAuthStateChange((event, session) => {
+                        if (session && session.user) {
+                            this.fetchUserProfile(session.user.id);
+                        } else {
+                            this.user.isLoggedIn = false;
+                            this.user.name = '';
+                            this.user.vulpisCoins = 0;
+                        }
+                    });
+
+                    // Check active session immediately on load
                     const { data: { session } } = await vulpisDB.auth.getSession();
-                    if (session) {
+                    if (session && session.user) {
                         this.fetchUserProfile(session.user.id);
                     }
                 },
@@ -205,7 +221,6 @@
                         } else {
                             alert('Account created successfully! You are now logged in.');
                             if (signUpData.user) {
-                                // Insert profile row
                                 await vulpisDB.from('profiles').upsert({
                                     id: signUpData.user.id,
                                     username: this.authForm.username || 'Player',
