@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vulpis</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Supabase to connect to your database -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    
+    <nav class="flex justify-between items-center bg-gray-800 p-4 rounded-lg mb-8">
+        <h1 class="text-2xl font-bold text-green-400">VULPIS</h1>
+        <div id="user-section">
+            <!-- We will use Javascript to change this to the user's name later -->
+            <button id="login-btn" class="bg-blue-500 px-4 py-2 rounded font-bold hover:bg-blue-600">Login / Sign Up</button>
+        </div>
+    </nav>
+
+    <div class="grid grid-cols-2 gap-8">
+        <!-- Avatar Editor UI -->
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-4">Avatar Editor</h2>
+            <div class="mb-4">
+                <label class="block mb-2">Skin Color:</label>
+                <input type="color" id="skin-color" value="#ffcc99" class="p-1 rounded">
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Hat:</label>
+                <select id="hat-select" class="bg-gray-700 p-2 rounded text-white w-full">
+                    <option value="none">None</option>
+                    <option value="red_cap">Red Cap</option>
+                    <option value="crown">Gold Crown</option>
+                </select>
+            </div>
+            <button id="save-avatar-btn" class="bg-green-500 w-full py-2 rounded font-bold mt-2">Save Avatar</button>
+        </div>
+
+        <!-- Games Grid UI -->
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-4">Discover Games</h2>
+            <div id="games-container" class="grid grid-cols-2 gap-4">
+                <!-- Games will be loaded here from the database -->
+                <p class="text-gray-400">Loading games...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load our logic file (we will create this next) -->
+    <script src="app.js"></script>
+</body>
+</html>
