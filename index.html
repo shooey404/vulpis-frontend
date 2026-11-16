@@ -1,258 +1,289 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vulpis - Discover Games & UGC</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Supabase JS v2 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Three.js CDN for WebGL 3D Avatar -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f3f4f6;
-            color: #111827;
-        }
-        .roblox-card {
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .roblox-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        }
-        [x-cloak] { display: none !important; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col overflow-x-hidden" x-data="vulpisApp()" x-init="initSupabase()">
+<!-- Roblox-style Top Navigation Bar -->
+<header class="bg-[#ffffff] border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <!-- Left: Logo & Nav Links -->
+        <div class="flex items-center space-x-8">
+            <div class="flex items-center space-x-2 cursor-pointer" @click="activeTab = 'home'">
+                <div class="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center font-black text-white text-lg shadow-md">V</div>
+                <span class="text-xl font-bold tracking-tight text-gray-900">VULPIS</span>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-semibold text-gray-600">
+                <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Home</button>
+                <button @click="activeTab = 'discover'" :class="activeTab === 'discover' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Discover</button>
+                <button @click="activeTab = 'avatarShop'" :class="activeTab === 'avatarShop' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Shop</button>
+                <button @click="activeTab = 'editor'; $nextTick(() => { checkAndInitWebGL(); })" :class="activeTab === 'editor' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Editor</button>
+            </nav>
+        </div>
 
-    <!-- Roblox-style Top Navigation Bar -->
-    <header class="bg-[#ffffff] border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <!-- Left: Logo & Nav Links -->
-            <div class="flex items-center space-x-8">
-                <div class="flex items-center space-x-2 cursor-pointer" @click="activeTab = 'home'">
-                    <div class="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center font-black text-white text-lg shadow-md">V</div>
-                    <span class="text-xl font-bold tracking-tight text-gray-900">VULPIS</span>
+        <!-- Right: Search & Currency & Login / Profile -->
+        <div class="flex items-center space-x-4">
+            <div class="hidden sm:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 w-48 border border-gray-200">
+                <i data-lucide="search" class="w-4 h-4 text-gray-400 mr-2"></i>
+                <input type="text" placeholder="Search..." class="bg-transparent text-sm w-full focus:outline-none text-gray-800">
+            </div>
+            <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                <span class="text-amber-500 font-bold text-sm">🦊</span>
+                <span class="text-xs font-extrabold text-amber-700" x-text="formatCoins(user.vulpisCoins)"></span>
+            </div>
+            <template x-if="!user.isLoggedIn">
+                <button @click="activeTab = 'login'" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">Login</button>
+            </template>
+            <template x-if="user.isLoggedIn">
+                <div class="flex items-center space-x-3">
+                    <div @click="activeTab = 'home'" class="w-9 h-9 rounded-full bg-orange-200 overflow-hidden cursor-pointer border border-orange-300 flex items-center justify-center font-bold text-orange-800 text-xs shadow-inner" x-text="user.name ? user.name.substring(0,2).toUpperCase() : 'VP'"></div>
+                    <button @click="logout()" class="text-xs font-bold text-gray-500 hover:text-red-600">Logout</button>
                 </div>
-                <nav class="hidden md:flex items-center space-x-6 text-sm font-semibold text-gray-600">
-                    <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Home</button>
-                    <button @click="activeTab = 'discover'" :class="activeTab === 'discover' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Discover</button>
-                    <button @click="activeTab = 'avatarShop'" :class="activeTab === 'avatarShop' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Shop</button>
-                    
-                    <!-- Only show Avatar Editor if logged in -->
-                    <template x-if="user.isLoggedIn">
-                        <button @click="activeTab = 'editor'; $nextTick(() => { updateWebGLSize(); })" :class="activeTab === 'editor' ? 'text-gray-900 border-b-2 border-orange-600 py-4' : 'hover:text-gray-900 py-4'">Avatar Editor</button>
-                    </template>
-                </nav>
+            </template>
+        </div>
+    </div>
+</header>
+
+<!-- Main Body Container -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- LOGIN / AUTH TAB -->
+    <div x-show="activeTab === 'login'" class="max-w-md mx-auto bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-6 mt-10" x-cloak>
+        <div class="text-center">
+            <h1 class="text-2xl font-black text-gray-900">Welcome to Vulpis</h1>
+            <p class="text-xs text-gray-500 mt-1">Sign in or create your account</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Email Address</label>
+                <input type="email" x-model="authForm.email" placeholder="you@example.com" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password (min 6 characters)</label>
+                <input type="password" x-model="authForm.password" placeholder="••••••••" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Username</label>
+                <input type="text" x-model="authForm.username" placeholder="YourUsername" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth (Age Verification)</label>
+                <input type="date" x-model="authForm.dob" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+            <button @click="handleLoginOrSignUp()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-sm">Continue to Vulpis</button>
+        </div>
+    </div>
+
+    <!-- TAB 1: HOME -->
+    <div x-show="activeTab === 'home'" class="space-y-8">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Hello, <span x-text="user.name || 'Player'"></span>!</h1>
+                <p class="text-sm text-gray-500 mt-0.5">Ready to jump back into your favorite worlds?</p>
+            </div>
+            <button @click="activeTab = 'discover'" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition">Discover Games</button>
+        </div>
+    </div>
+
+    <!-- TAB 2: DISCOVER -->
+    <div x-show="activeTab === 'discover'" class="space-y-8" x-cloak>
+        <h1 class="text-3xl font-extrabold text-gray-900">Discover Worlds</h1>
+        <p class="text-sm text-gray-500">Explore community-made blocky adventures.</p>
+    </div>
+
+    <!-- TAB 3: AVATAR SHOP -->
+    <div x-show="activeTab === 'avatarShop'" class="space-y-8" x-cloak>
+        <h1 class="text-2xl font-bold text-gray-900">Avatar Shop</h1>
+    </div>
+
+    <!-- TAB 4: AVATAR EDITOR -->
+    <div x-show="activeTab === 'editor'" class="space-y-8" x-cloak>
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-900">3D Avatar Customizer</h1>
+            <button @click="alert('Avatar saved to database!')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm">Save Avatar</button>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- WebGL Canvas Container -->
+            <div class="bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center min-h-[480px] shadow-sm">
+                <div id="webgl-container" class="w-full h-80 bg-gradient-to-b from-gray-50 to-gray-100 border border-gray-200 rounded-2xl relative overflow-hidden shadow-inner flex items-center justify-center">
+                    <!-- Three.js mounts here -->
+                </div>
+                <span class="text-sm font-bold text-gray-800 mt-4">WebGL 3D Viewport</span>
             </div>
 
-            <!-- Right: Search & Currency & Login / Profile -->
-            <div class="flex items-center space-x-4">
-                <div class="hidden sm:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 w-48 border border-gray-200">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-400 mr-2"></i>
-                    <input type="text" placeholder="Search..." class="bg-transparent text-sm w-full focus:outline-none text-gray-800">
-                </div>
-                <div class="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
-                    <span class="text-amber-500 font-bold text-sm">🦊</span>
-                    <span class="text-xs font-extrabold text-amber-700" x-text="formatCoins(user.vulpisCoins)"></span>
-                </div>
-                <template x-if="!user.isLoggedIn">
-                    <button @click="activeTab = 'login'" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">Login</button>
-                </template>
-                <template x-if="user.isLoggedIn">
+            <!-- Customization Controls -->
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
+                <h2 class="text-base font-bold text-gray-900">Character Customizer</h2>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Skin Tone</label>
                     <div class="flex items-center space-x-3">
-                        <div @click="activeTab = 'home'" class="w-9 h-9 rounded-full bg-orange-200 overflow-hidden cursor-pointer border border-orange-300 flex items-center justify-center font-bold text-orange-800 text-xs shadow-inner" x-text="user.name ? user.name.substring(0,2).toUpperCase() : 'VP'"></div>
-                        <button @click="logout()" class="text-xs font-bold text-gray-500 hover:text-red-600">Logout</button>
+                        <template x-for="tone in ['#fde68a', '#f59e0b', '#d97706', '#92400e', '#60a5fa']">
+                            <button @click="avatar.skinTone = tone; updateMaterials()" :class="avatar.skinTone === tone ? 'ring-2 ring-orange-600 scale-105' : 'opacity-70'" class="w-10 h-10 rounded-xl transition shadow-sm" :style="'background-color: ' + tone"></button>
+                        </template>
                     </div>
-                </template>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Body Container -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
-
-        <!-- LOGIN / AUTH TAB -->
-        <div x-show="activeTab === 'login'" class="max-w-md mx-auto bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-6 mt-10" x-cloak>
-            <div class="text-center">
-                <h1 class="text-2xl font-black text-gray-900">Welcome to Vulpis</h1>
-                <p class="text-xs text-gray-500 mt-1">Sign in or create your account</p>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Email Address</label>
-                    <input type="email" x-model="authForm.email" placeholder="you@example.com" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password (min 6 characters)</label>
-                    <input type="password" x-model="authForm.password" placeholder="••••••••" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Username</label>
-                    <input type="text" x-model="authForm.username" placeholder="YourUsername" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Date of Birth (Age Verification)</label>
-                    <input type="date" x-model="authForm.dob" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-orange-500">
-                </div>
-                <button @click="handleLoginOrSignUp()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-sm">Continue to Vulpis</button>
             </div>
         </div>
+    </div>
 
-        <!-- TAB 1: HOME -->
-        <div x-show="activeTab === 'home'" class="space-y-8">
-            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Hello, <span x-text="user.name || 'Player'"></span>!</h1>
-                    <p class="text-sm text-gray-500 mt-0.5">Ready to jump back into your favorite worlds?</p>
-                </div>
-                <button @click="activeTab = 'discover'" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition">Discover Games</button>
-            </div>
-        </div>
+</main>
 
-        <!-- TAB 2: DISCOVER -->
-        <div x-show="activeTab === 'discover'" class="space-y-8" x-cloak>
-            <h1 class="text-3xl font-extrabold text-gray-900">Discover Worlds</h1>
-            <p class="text-sm text-gray-500">Explore community-made blocky adventures.</p>
-        </div>
+<footer class="bg-white border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-500">
+    <p>&copy; 2026 Vulpis Corporation. All rights reserved.</p>
+</footer>
 
-        <!-- TAB 3: AVATAR SHOP -->
-        <div x-show="activeTab === 'avatarShop'" class="space-y-8" x-cloak>
-            <h1 class="text-2xl font-bold text-gray-900">Avatar Shop</h1>
-        </div>
+<script>
+    const SUPABASE_URL = "https://sbbchelaldkwsgeutxxg.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_449WPgIWrOqh6i--LOVcfg_sMTe5vnh";
+    const vulpisDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        <!-- TAB 4: AVATAR EDITOR -->
-        <div x-show="activeTab === 'editor'" class="space-y-8" x-cloak>
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-gray-900">3D Avatar Customizer</h1>
-                <button @click="alert('Avatar saved to database!')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm">Save Avatar</button>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl p-6 flex items-center justify-center min-h-[400px]">
-                <div id="webgl-container" class="w-full h-80 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center"></div>
-            </div>
-        </div>
+    let scene, camera, renderer, characterGroup, headMesh, torsoMesh;
 
-    </main>
+    function vulpisApp() {
+        return {
+            activeTab: 'home',
+            user: {
+                id: null,
+                name: '',
+                vulpisCoins: 0,
+                isLoggedIn: false
+            },
+            avatar: {
+                skinTone: '#f59e0b',
+                shirtColor: '#ea580c'
+            },
+            authForm: { email: '', password: '', username: '', dob: '' },
+            formatCoins(val) { return val ? val.toLocaleString() : '0'; },
+            
+            async initSupabase() {
+                // Check local session storage first so session is instantly recognized on reload
+                const { data: { session } } = await vulpisDB.auth.getSession();
+                if (session && session.user) {
+                    await this.fetchUserProfile(session.user.id);
+                }
+            },
 
-    <footer class="bg-white border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-500">
-        <p>&copy; 2026 Vulpis Corporation. All rights reserved.</p>
-    </footer>
+            async fetchUserProfile(userId) {
+                const { data, error } = await vulpisDB
+                    .from('profiles')
+                    .select('username, bux')
+                    .eq('id', userId)
+                    .single();
 
-    <script>
-        const SUPABASE_URL = "https://sbbchelaldkwsgeutxxg.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_449WPgIWrOqh6i--LOVcfg_sMTe5vnh";
-        const vulpisDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                if (data) {
+                    this.user.id = userId;
+                    this.user.name = data.username || 'Player';
+                    this.user.vulpisCoins = data.bux || 0;
+                    this.user.isLoggedIn = true;
+                }
+            },
 
-        function vulpisApp() {
-            return {
-                activeTab: 'home',
-                user: {
-                    id: null,
-                    name: '',
-                    vulpisCoins: 0,
-                    isLoggedIn: false
-                },
-                authForm: { email: '', password: '', username: '', dob: '' },
-                formatCoins(val) { return val ? val.toLocaleString() : '0'; },
-                
-                async initSupabase() {
-                    // Listen for real-time authentication state changes so reload keeps you logged in
-                    vulpisDB.auth.onAuthStateChange((event, session) => {
-                        if (session && session.user) {
-                            this.fetchUserProfile(session.user.id);
-                        } else {
-                            this.user.isLoggedIn = false;
-                            this.user.name = '';
-                            this.user.vulpisCoins = 0;
-                        }
-                    });
+            async handleLoginOrSignUp() {
+                if (!this.authForm.email || !this.authForm.password) {
+                    alert('Please fill in your email and password.');
+                    return;
+                }
 
-                    // Check active session immediately on load
-                    const { data: { session } } = await vulpisDB.auth.getSession();
-                    if (session && session.user) {
-                        this.fetchUserProfile(session.user.id);
-                    }
-                },
+                const { data, error } = await vulpisDB.auth.signInWithPassword({
+                    email: this.authForm.email,
+                    password: this.authForm.password
+                });
 
-                async fetchUserProfile(userId) {
-                    const { data, error } = await vulpisDB
-                        .from('profiles')
-                        .select('username, bux')
-                        .eq('id', userId)
-                        .single();
-
-                    if (data) {
-                        this.user.id = userId;
-                        this.user.name = data.username || 'Player';
-                        this.user.vulpisCoins = data.bux || 0;
-                        this.user.isLoggedIn = true;
-                    }
-                },
-
-                async handleLoginOrSignUp() {
-                    if (!this.authForm.email || !this.authForm.password) {
-                        alert('Please fill in your email and password.');
-                        return;
-                    }
-
-                    // Try login first
-                    const { data, error } = await vulpisDB.auth.signInWithPassword({
+                if (error) {
+                    const { data: signUpData, error: signUpError } = await vulpisDB.auth.signUp({
                         email: this.authForm.email,
-                        password: this.authForm.password
+                        password: this.authForm.password,
+                        options: {
+                            data: { username: this.authForm.username || 'Player' }
+                        }
                     });
 
-                    if (error) {
-                        // If login fails, sign up new user
-                        const { data: signUpData, error: signUpError } = await vulpisDB.auth.signUp({
-                            email: this.authForm.email,
-                            password: this.authForm.password,
-                            options: {
-                                data: { username: this.authForm.username || 'Player' }
-                            }
-                        });
-
-                        if (signUpError) {
-                            alert('Authentication Error: ' + signUpError.message);
-                        } else {
-                            alert('Account created successfully! You are now logged in.');
-                            if (signUpData.user) {
-                                await vulpisDB.from('profiles').upsert({
-                                    id: signUpData.user.id,
-                                    username: this.authForm.username || 'Player',
-                                    bux: 100
-                                });
-                                this.fetchUserProfile(signUpData.user.id);
-                                this.activeTab = 'home';
-                            }
+                    if (signUpError) {
+                        alert('Authentication Error: ' + signUpError.message);
+                    } else {
+                        alert('Account created successfully!');
+                        if (signUpData.user) {
+                            await vulpisDB.from('profiles').upsert({
+                                id: signUpData.user.id,
+                                username: this.authForm.username || 'Player',
+                                bux: 100
+                            });
+                            await this.fetchUserProfile(signUpData.user.id);
+                            this.activeTab = 'home';
                         }
-                    } else if (data.user) {
-                        this.fetchUserProfile(data.user.id);
-                        this.activeTab = 'home';
-                        alert('Logged in successfully!');
                     }
-                },
-
-                async logout() {
-                    await vulpisDB.auth.signOut();
-                    this.user.isLoggedIn = false;
-                    this.user.name = '';
-                    this.user.vulpisCoins = 0;
+                } else if (data.user) {
+                    await this.fetchUserProfile(data.user.id);
                     this.activeTab = 'home';
-                    alert('Logged out successfully.');
-                },
+                    alert('Logged in successfully!');
+                }
+            },
 
-                updateWebGLSize() {}
+            async logout() {
+                await vulpisDB.auth.signOut();
+                this.user.isLoggedIn = false;
+                this.user.name = '';
+                this.user.vulpisCoins = 0;
+                this.activeTab = 'home';
+                alert('Logged out successfully.');
+            },
+
+            checkAndInitWebGL() {
+                this.$nextTick(() => {
+                    const container = document.getElementById('webgl-container');
+                    if (!container) return;
+                    if (!renderer) {
+                        this.initWebGL(container);
+                    } else {
+                        this.updateWebGLSize();
+                    }
+                });
+            },
+
+            initWebGL(container) {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.set(0, 1, 5);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(renderer.domElement);
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(5, 10, 7);
+                scene.add(dirLight);
+
+                characterGroup = new THREE.Group();
+                scene.add(characterGroup);
+
+                const skinMat = new THREE.MeshLambertMaterial({ color: this.avatar.skinTone });
+                const headGeo = new THREE.BoxGeometry(1, 1, 1);
+                headMesh = new THREE.Mesh(headGeo, skinMat);
+                headMesh.position.y = 1;
+                characterGroup.add(headMesh);
+
+                const clock = new THREE.Clock();
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    characterGroup.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                };
+                animate();
+            },
+
+            updateWebGLSize() {
+                const container = document.getElementById('webgl-container');
+                if (!container || !renderer || !camera) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            },
+
+            updateMaterials() {
+                if (headMesh) {
+                    headMesh.material.color.set(this.avatar.skinTone);
+                }
             }
         }
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
-        document.addEventListener('alpine:updated', () => { lucide.createIcons(); });
-    </script>
-</body>
-</html>
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
+    document.addEventListener('alpine:updated', () => { lucide.createIcons(); });
+</script>
